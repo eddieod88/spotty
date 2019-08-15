@@ -1,6 +1,8 @@
 import sqlite3
 import argparse
 import pprint
+from random import shuffle
+
 
 import spotipy
 import spotipy.util
@@ -29,23 +31,30 @@ import spotipy.util
 """
 
 
-def get_songs(conn, username, playlist_id) -> []:
+def get_songs(conn, chosen_playlist) -> []:
     """
         - Return a list of Songs in any order. 
         - Only include songs which are not in the db. 
     """
     songs = []
     c = conn.cursor()
+    
+    tracks = chosen_playlist['tracks']
+    while tracks['next']:
+        # gets groups of 100 tracks
+        tracks = sp.next(tracks)
+        # loops through the group
+        for i, item in enumerate(tracks['items']):
+            song = item['track']
+            metadata = (song['name'], song['artists'][0]['name'], song['album']['name'], )
+            c.execute("SELECT _id FROM Song WHERE Title=? AND Artist=? AND Album=?;", metadata)
+            song_exists = c.fetchone()
+            if not song_exists and song['id'] is not None:
+                songs.append(song)
 
-    for track in playlist['tracks']['items']:
-        song = track['track']
-        metadata = (song['name'], song['artists'][0]['name'], song['album']['name'], )
-        c.execute("SELECT _id FROM Song WHERE Title=? AND Artist=? AND Album=?;", metadata)
-        song_exists = c.fetchone()
-        if not song_exists:
-            songs.append(song)
+    shuffle(songs)
     return songs
-
+        
 def create_db(conn):
     with open('songs_db_script.sql', 'r') as sql_script:
         s = sql_script.read()
@@ -89,14 +98,16 @@ if not token:
     print("Can't get token for {}".format(username))
     exit(1)
 sp = spotipy.Spotify(auth=token)
-playlist = sp.user_playlist(username, playlist_id=the_vibe_id)
+playlist = sp.user_playlist(username, playlist_id=the_vibe_id, fields="tracks,next")
 
 db_conn = sqlite3.connect('training_songs.db')
 if args.reset_db:
     create_db(db_conn)
 
-songs = get_songs(db_conn, username, the_vibe_id)
+songs = get_songs(db_conn, playlist)
 # pprint.pprint(songs)
+
+print("Total songs found: {}".format(len(songs)))
 
 print("Type a tag which you would like to assign to each song. type s to skip a song, type quit to exit.")
 for song in songs:
@@ -113,9 +124,6 @@ for song in songs:
     elif 's' == tag:
         continue
     else:
-        # pprint.pprint(sp.audio_features(song['id']))
-        id = song['id']
-        if id:
-            insert_to_db(db_conn, song, sp.audio_features(song['id']), tag)
+        insert_to_db(db_conn, song, sp.audio_features(song['id']), tag)
 
 db_conn.close()
