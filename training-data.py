@@ -66,16 +66,22 @@ def insert_to_db(conn, song, charateristics, tag):
     c = conn.cursor()
     tag = tag.lower()
     tag_insert = (tag, )
+    song_data = (song['name'], song['artists'][0]['name'], song['album']['name'], chars['acousticness'],
+                chars['danceability'], chars['energy'], chars['instrumentalness'], chars['key'], chars['liveness'],
+                chars['speechiness'], chars['tempo'], chars['valence'], )
     try:
         c.execute("INSERT INTO Tag (Name) VALUES (?)", tag_insert)
         conn.commit()
     except sqlite3.IntegrityError:
         pass
-    song_data = (song['name'], song['artists'][0]['name'], song['album']['name'], chars['acousticness'],
-                chars['danceability'], chars['energy'], chars['instrumentalness'], chars['key'], chars['liveness'],
-                chars['speechiness'], chars['tempo'], chars['valence'], tag, )
-    c.execute("INSERT INTO Song (Title, Artist, Album, Acousticness, Danceability, Energy, Instrumentalness, MusicalKey, Liveness, Speechiness, Tempo, Valence, Tag )" \
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT Name FROM Tag WHERE Name=?))", song_data)
+    try:
+        c.execute("INSERT INTO Song (Title, Artist, Album, Acousticness, Danceability, Energy, Instrumentalness, MusicalKey, Liveness, Speechiness, Tempo, Valence)" \
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", song_data)
+        conn.commit()
+    except sqlite3.IntegrityError:
+        pass
+    relationship_data = (song['name'], song['artists'][0]['name'], song['album']['name'], tag,)
+    c.execute("INSERT INTO Relationship (Song_id, Tag_id) VALUES ((SELECT _id FROM Song WHERE Title=? AND Artist=? AND Album=?), (SELECT _id FROM Tag WHERE Name=?));", relationship_data)
     conn.commit()
 
 def check_tag_exists(tag):
@@ -109,7 +115,7 @@ songs = get_songs(db_conn, playlist)
 
 print("Total songs found: {}".format(len(songs)))
 
-print("Type a tag which you would like to assign to each song. type s to skip a song, type quit to exit.")
+print("Type some tags which you would like to assign to each song, separated by spaces. type s to skip a song, type quit to exit.")
 for song in songs:
     # Display Artist and Name of song. 
     track_str = song['name']
@@ -117,13 +123,15 @@ for song in songs:
     for artist in song['artists']:
         track_str += "{}, ".format(artist['name'])
     print(track_str)
-    tag = input()
-    tag = tag.strip()
-    if 'quit' == tag:
+    tags = input()
+    tags = tags.strip()
+    if 'quit' == tags:
         break
-    elif 's' == tag:
+    elif 's' == tags:
         continue
     else:
-        insert_to_db(db_conn, song, sp.audio_features(song['id']), tag)
+        tags = tags.split()
+        for tag in tags:
+            insert_to_db(db_conn, song, sp.audio_features(song['id']), tag)
 
 db_conn.close()
