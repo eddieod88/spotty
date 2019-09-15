@@ -26,8 +26,9 @@ import spotipy.util
      - Remember to start up a local host server and export the Spotify API credentials
 
     TODO:
-     - Multitags - will need to change db to accomodate this feature
      - Safety feature if you miss spell a tag
+     - AWS RDS
+     - Choose playlist from program arg
 """
 
 
@@ -66,7 +67,7 @@ def insert_to_db(conn, song, charateristics, tag):
     c = conn.cursor()
     tag = tag.lower()
     tag_insert = (tag, )
-    song_data = (song['name'], song['artists'][0]['name'], song['album']['name'], chars['acousticness'],
+    song_insert = (song['name'], song['artists'][0]['name'], song['album']['name'], chars['acousticness'],
                 chars['danceability'], chars['energy'], chars['instrumentalness'], chars['key'], chars['liveness'],
                 chars['speechiness'], chars['tempo'], chars['valence'], )
     try:
@@ -76,12 +77,12 @@ def insert_to_db(conn, song, charateristics, tag):
         pass
     try:
         c.execute("INSERT INTO Song (Title, Artist, Album, Acousticness, Danceability, Energy, Instrumentalness, MusicalKey, Liveness, Speechiness, Tempo, Valence)" \
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", song_data)
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", song_insert)
         conn.commit()
     except sqlite3.IntegrityError:
         pass
-    relationship_data = (song['name'], song['artists'][0]['name'], song['album']['name'], tag,)
-    c.execute("INSERT INTO Relationship (Song_id, Tag_id) VALUES ((SELECT _id FROM Song WHERE Title=? AND Artist=? AND Album=?), (SELECT _id FROM Tag WHERE Name=?));", relationship_data)
+    relationship_insert = (song['name'], song['artists'][0]['name'], song['album']['name'], tag,)
+    c.execute("INSERT INTO Relationship (Song_id, Tag_id) VALUES ((SELECT _id FROM Song WHERE Title=? AND Artist=? AND Album=?), (SELECT _id FROM Tag WHERE Name=?));", relationship_insert)
     conn.commit()
 
 def check_tag_exists(tag):
