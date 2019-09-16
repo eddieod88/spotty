@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from scipy.optimize import fmin_bfgs
 
 
 class Train:
@@ -20,6 +21,8 @@ class Train:
         self.y = y
         self.theta = pd.Series
 
+        self.m = len(y)
+
     @staticmethod
     def _sigmoid(x):
         """
@@ -28,15 +31,19 @@ class Train:
         :return: Sigmoid of all of the values in the input vector
         """
         sig = 1 / (1 + np.exp(-x))
-        print(sig)
         return sig
 
-    def _cost(self, X: pd.DataFrame, y: pd.Series, theta: pd.Series):
+    def _cost(self, theta: pd.Series):
         #  For multi-class: https://ml-cheatsheet.readthedocs.io/en/latest/loss_functions.html
-        m = len(y)
-        cost = -(1/m) * (np.dot(y, np.log(self._sigmoid(np.dot(theta, X.T)))) +
-                 np.dot((np.ones(len(y)) - y), np.log(np.ones(len(y)) - self._sigmoid(np.dot(theta, X.T)))))
+        cost = -(1/self.m) * (np.dot(self.y, np.log(self._sigmoid(np.dot(theta, self.X.T)))) +
+                              np.dot((np.ones(len(self.y)) - self.y), np.log(np.ones(len(self.y)) -
+                                                                             self._sigmoid(np.dot(theta, self.X.T)))))
         return cost
 
-    def _gradient(self):
-        pass
+    def _gradient(self, theta: pd.Series):
+        grad = (1/self.m) * np.dot(self._sigmoid(np.dot(theta, self.X.T)) - self.y, self.X)
+        return grad
+
+    def optimise(self, theta_init: pd.Series):
+        opt = fmin_bfgs(self._cost, theta_init.values, fprime=self._gradient)
+        return opt

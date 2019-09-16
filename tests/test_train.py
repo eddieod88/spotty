@@ -1,9 +1,6 @@
 import unittest
 import numpy as np
 import pandas as pd
-import csv
-
-# wines = np.array(wines[1:], dtype=np.float)
 
 from train import Train
 
@@ -26,8 +23,6 @@ class MyTestCase(unittest.TestCase):
         # theta needs to be the same length as the number of features (including the extra column due to the intercept)
         theta = np.ones(len(self.X.columns))
         self.theta = pd.Series(theta)
-        print(f'{self.X}\n\n{self.y}')
-        print(f'{len(self.X)}')
 
     def test_dot(self):
         # Note: theta^T . X === X^T . theta
@@ -47,15 +42,29 @@ class MyTestCase(unittest.TestCase):
         for s_val, l_val in zip(small_sig, large_sig):
             self.assertAlmostEqual(s_val, 0)
             self.assertAlmostEqual(l_val, 1)
-        # with self.assertRaises(TypeError):
-        no_err_1 = np.log(Train._sigmoid(np.dot(self.theta, self.X.T)))
 
     def test_cost_zeros(self):
         # Cost should be 0.693 when theta is zeroed
         theta_z = pd.Series(np.zeros(len(self.X.columns)))
         train = Train(self.X, self.y)
-        cost = train._cost(self.X, self.y, theta_z)
+        cost = train._cost(theta_z)
         self.assertAlmostEqual(cost, 0.693, places=3)
+
+    def test_grad(self):
+        # Unsure what the grad should come to. but I think a vector of length = to number of features (+1 for intercept)
+        theta_z = pd.Series(np.zeros(len(self.X.columns)))
+        train = Train(self.X, self.y)
+        grad = train._gradient(theta_z)
+        print(grad)
+        # self.assertAlmostEqual(cost, 0.693, places=3)
+
+    def test_optimise(self):
+        train = Train(self.X, self.y)
+        theta_init = pd.Series(np.ones(len(self.X.columns)))
+        opt = train.optimise(theta_init)
+        expected_vector = np.array([-25.161, 0.206, 0.201])
+        for exp_el, result_el in zip(opt, expected_vector):
+            self.assertAlmostEqual(result_el, exp_el, places=3)
 
 
 if __name__ == '__main__':
