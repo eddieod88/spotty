@@ -92,22 +92,34 @@ def check_tag_exists(tag):
 parser = argparse.ArgumentParser(description="Tag up some songs")
 parser.add_argument('db_path', metavar='db_path', type=str, help="relative db path destination from top dir")
 parser.add_argument('username', metavar='spotify_user',type=str, help="Username of desired Spotify account")
+parser.add_argument('playlist_name', type=str, help="Name of playlist to gather data from")
 parser.add_argument('--reset-db', action='store_true', help="Option to recreate the database from scratch - Use this on first time use too")
+parser.add_argument('--assign-tag', '-a', action='store', type=str, help='Assign a tag to all the songs in this playlist')
 args = parser.parse_args()
 
 username = args.username
-the_vibe_id = '51p6p68CssRUi23lCWD78z'
-
 scope = 'user-library-read'
 token = spotipy.util.prompt_for_user_token(username, scope)
-
 if not token:
     print("Can't get token for {}".format(username))
     exit(1)
-sp = spotipy.Spotify(auth=token)
-playlist = sp.user_playlist(username, playlist_id=the_vibe_id, fields="tracks,next")
 
-db_conn = sqlite3.connect('training_songs.db')
+sp = spotipy.Spotify(auth=token)
+
+playlists = sp.user_playlists(username)
+playlist_id = ''
+for playlist in playlists['items']:
+    if args.playlist_name in playlist['name']:
+        print(playlist['id'])
+        playlist_id = playlist['id']
+
+if playlist_id is None:
+    print(f'Could not find {playlist_id}. If playlist contains emojis, omit them')
+    exit(1)
+
+playlist = sp.user_playlist(username, playlist_id=playlist_id, fields="tracks,next")
+
+db_conn = sqlite3.connect(args.db_path)
 if args.reset_db:
     create_db(db_conn)
 
@@ -116,23 +128,27 @@ songs = get_songs(db_conn, playlist)
 
 print("Total songs found: {}".format(len(songs)))
 
-print("Type some tags which you would like to assign to each song, separated by spaces. type s to skip a song, type quit to exit.")
 for song in songs:
-    # Display Artist and Name of song. 
-    track_str = song['name']
-    track_str += " - "
-    for artist in song['artists']:
-        track_str += "{}, ".format(artist['name'])
-    print(track_str)
-    tags = input()
-    tags = tags.strip()
-    if 'quit' == tags:
-        break
-    elif 's' == tags:
-        continue
+    if args.assign_tag is not None:
+        print(f"Inserting {song['name']} into to db")
+        insert_to_db(db_conn, song, sp.audio_features(song['id']), args.assign_tag)
     else:
-        tags = tags.split()
-        for tag in tags:
-            insert_to_db(db_conn, song, sp.audio_features(song['id']), tag)
+        print("Type some tags which you would like to assign to each song, separated by spaces. type s to skip a song, type quit to exit.")
+        # Display Artist and Name of song.
+        track_str = song['name']
+        track_str += " - "
+        for artist in song['artists']:
+            track_str += "{}, ".format(artist['name'])
+        print(track_str)
+        tags = input()
+        tags = tags.strip()
+        if 'quit' == tags:
+            break
+        elif 's' == tags:
+            continue
+        else:
+            tags = tags.split()
+            for tag in tags:
+                insert_to_db(db_conn, song, sp.audio_features(song['id']), tag)
 
 db_conn.close()

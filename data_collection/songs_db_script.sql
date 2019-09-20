@@ -31,3 +31,7 @@ CREATE TABLE Relationship (
     FOREIGN KEY (Song_id)   REFERENCES Song(_id),
     FOREIGN KEY (Tag_id)       REFERENCES Tag(_id)
 );
+
+-- Useful commands:
+-- 1. standard data set (without tempo as it is not normalised)
+--  select Song._id, Acousticness, Danceability, Energy, Instrumentalness, MusicalKey, Liveness, Speechiness, Valence, Relationship.Tag_id from Song JOIN Relationship ON Song._id=Relationship.Song_id;

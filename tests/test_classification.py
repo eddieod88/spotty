@@ -5,7 +5,7 @@ import pandas as pd
 from classification import Classification
 
 
-class MyTestCase(unittest.TestCase):
+class TestClassification(unittest.TestCase):
     def setUp(self):
         # Data only contains the features!
         headings = ["feature_1", "feature_2"]
