@@ -32,7 +32,7 @@ You can then use the command, ```conda activate tags``` to enter your conda pyth
 
 ## Current Status
 
-Binary classification is working ok.
+Binary classification is working ok for the 'algorithm_test_data.csv'. However for the song data, it isn't working. The error 'Warning: Desired error not necessarily achieved due to precision loss.' is appearing. This could be because the cost function should be of higher order polynomial. 
 
 ## Usage
 
