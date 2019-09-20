@@ -32,11 +32,14 @@ You can then use the command, ```conda activate tags``` to enter your conda pyth
 
 ## Current Status
 
-Binary classification is working ok for the 'algorithm_test_data.csv'. However for the song data, it isn't working. The error 'Warning: Desired error not necessarily achieved due to precision loss.' is appearing. This could be because the cost function should be of higher order polynomial. 
+Binary classification is working ok for the 'algorithm_test_data.csv'. However for the song data, it isn't working. 
+
 
 ## Usage
 
 Currently in developing stage so there is no program to run as such. Tests are being used to ensure that each function works as it should. The 'algorithm_test_data.csv' and 'binary_dnb_ambient.csv' are being used in the test_classification.py file at the moment.
+
+Created a plot script to be able to visualise the classification by running the ```plot.py``` script. It shows the difference in Danceability and Energy according the the Echonest library for Drum and Bass and Ambient tracks.
 
 
 ## Tests
