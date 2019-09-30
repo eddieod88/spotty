@@ -7,7 +7,7 @@ _Given a set of songs in a library which have been assigned one or many tags des
 Spotify's Echonest data set of song characteristics have been used to provide the features of this problem. SciPy algorithms have been used to create the model.
 
 
-##Stories
+## Stories
 ### Stage 1 - Binary Classification
 
 Classify whether a song belongs to one tag or another. Logistic regression used.
