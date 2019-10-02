@@ -30,10 +30,6 @@ conda create -n tags -f requirements.yml
 
 You can then use the command, ```conda activate tags``` to enter your conda python env.
 
-## Current Status
-
-Binary classification is working ok for the 'algorithm_test_data.csv'. However for the song data, it isn't working. 
-
 
 ## Usage
 
