@@ -4,6 +4,11 @@ from scipy.optimize import fmin_bfgs
 from sklearn.metrics import f1_score
 
 
+"""
+Creating classification algo from scratch.
+"""
+
+
 class Classification:
     """
         Overall aim of this class is to determine the values for the vector, theta. Theta will be stored in a file
