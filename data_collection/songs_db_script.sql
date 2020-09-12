@@ -35,3 +35,27 @@ CREATE TABLE Relationship (
 -- Useful commands:
 -- 1. standard data set (without tempo as it is not normalised)
 --  select Song._id, Acousticness, Danceability, Energy, Instrumentalness, MusicalKey, Liveness, Speechiness, Valence, Relationship.Tag_id from Song JOIN Relationship ON Song._id=Relationship.Song_id;
+
+
+-- Getting big old relationship table
+
+select s.Title, s.Artist, s.Album, s.Acousticness, s.Danceability, s.Energy, s.Instrumentalness, s.MusicalKey, s.Liveness, s.Tempo, s.Valence, t.Name from Relationship as r
+join Song as s on s._id = r.Song_id
+join Tag as t on t._id = r.Tag_id;
+
+create table beats_playlist_2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    artist VARCHAR(255),
+    name VARCHAR(255),
+    acousticness REAL,
+    danceability REAL,
+    energy REAL,
+    liveness REAL,
+    loudness REAL,
+    mode REAL,
+    speechiness REAL,
+    tempo REAL,
+    valence REAL,
+    instrumentalness REAL,
+    playlist VARCHAR(255)
+)
