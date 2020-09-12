@@ -3,9 +3,13 @@ import pandas as pd
 from sklearn.preprocessing import PowerTransformer
 import matplotlib.pyplot as plt
 
-from classification import Classification
 
-with open("data_collection/binary_dnb_ambient_train.csv", 'r') as f:
+"""
+Determine difference between ambient and dnb music - practice.
+"""
+
+
+with open("../data_collection/binary_dnb_ambient_train.csv", 'r') as f:
     csv_data = pd.read_csv(f)
 if "MusicalKey" in csv_data.columns[5]:
     csv_data = csv_data.drop(columns="MusicalKey")  # this is bad data - codeified version of a musical key - meaningless and can't normalise
