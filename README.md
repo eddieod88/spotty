@@ -28,3 +28,20 @@ This project tries to address the issue in which someone's music playlists evolv
  regardless how neat they started
  
 Used clustering algorithms to try and find groups within playlists which could suggest to a user a split in a playlist 
+
+### Log
+May 2024
+1. Was using the explore notebook to get back into things and see the data
+
+9th Oct 2024
+1. Have a look to see if there are any clusters!!
+1. Tried k-means on bones, did not really work as the results were pretty random by nature.  Try other types of cluster next time and other types of scores
+
+
+### TODO
+1. See if we have any hope in separating individual playlists by having a look at PCA
+1. Update the playlist data with fresh songs
+1. Test out a separation script of maybe just kmeans for suggesting splits - whichever one gives the best score - 1 - 5
+1. Get main genres and sub genres for each of the songs in the splits and an associated album art.
+
+
