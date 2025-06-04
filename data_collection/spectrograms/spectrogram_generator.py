@@ -14,7 +14,7 @@ Each visualization uses the middle 2 minutes of each song for consistent analysi
 Songs shorter than 2 minutes are automatically skipped.
 
 Requirements:
-    pip install librosa matplotlib numpy soundfile typer tqdm
+    pip install librosa matplotlib numpy soundfile typer tqdm mutagen
 """
 
 import os
@@ -28,8 +28,10 @@ import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import re
 import typer
 from tqdm import tqdm
+from mutagen import File as MutagenFile
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore")
@@ -38,6 +40,104 @@ warnings.filterwarnings("ignore")
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg", ".wma"}
 
 app = typer.Typer(help="Generate comprehensive music analysis visualizations.")
+
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize a string to be safe for use as a filename.
+
+    Args:
+        filename: The string to sanitize
+
+    Returns:
+        A sanitized string safe for use as a filename
+    """
+    # Remove or replace problematic characters
+    filename = re.sub(r'[<>:"/\\|?*]', "", filename)  # Remove invalid chars
+    filename = re.sub(r"\s+", "_", filename)  # Replace spaces with underscores
+    filename = re.sub(r"[^\w\-_.]", "", filename)  # Keep only alphanumeric, dash, underscore, dot
+    filename = filename.strip("._")  # Remove leading/trailing dots and underscores
+    
+    # Limit length to avoid filesystem issues
+    if len(filename) > 100:
+        filename = filename[:100]
+    
+    return filename or "unknown"
+
+
+def extract_metadata(audio_file: Path) -> Tuple[str, str]:
+    """Extract artist and song name from audio file metadata.
+
+    Args:
+        audio_file: Path to the audio file
+
+    Returns:
+        Tuple of (artist, song_name). Returns sanitized values or defaults if not found.
+    """
+    try:
+        metadata = MutagenFile(str(audio_file))
+        if metadata is None:
+            return parse_filename(audio_file)
+        
+        # Try different tag formats for artist
+        artist = None
+        for key in ['TPE1', 'ARTIST', '\xa9ART', 'Artist']:
+            if key in metadata and metadata[key]:
+                artist = str(metadata[key][0]) if isinstance(metadata[key], list) else str(metadata[key])
+                break
+        
+        # Try different tag formats for title
+        title = None
+        for key in ['TIT2', 'TITLE', '\xa9nam', 'Title']:
+            if key in metadata and metadata[key]:
+                title = str(metadata[key][0]) if isinstance(metadata[key], list) else str(metadata[key])
+                break
+        
+        # If metadata not found, parse filename
+        if not artist or not title:
+            file_artist, file_title = parse_filename(audio_file)
+            artist = artist or file_artist
+            title = title or file_title
+        
+        return sanitize_filename(artist), sanitize_filename(title)
+        
+    except Exception:
+        # Fallback to filename parsing
+        return parse_filename(audio_file)
+
+
+def parse_filename(audio_file: Path) -> Tuple[str, str]:
+    """Parse artist and song name from filename.
+
+    Common formats supported:
+    - "Artist - Song.mp3"
+    - "Artist_Song.mp3"
+    - "01 Artist - Song.mp3"
+    - "Song.mp3" (artist = "Unknown")
+
+    Args:
+        audio_file: Path to the audio file
+
+    Returns:
+        Tuple of (artist, song_name)
+    """
+    filename = audio_file.stem
+    
+    # Remove track numbers (e.g., "01 ", "1. ", "01. ")
+    filename = re.sub(r"^\d+[\.\s]+", "", filename)
+    
+    # Try to split on common separators
+    separators = [" - ", "_-_", " – ", " — "]
+    
+    for sep in separators:
+        if sep in filename:
+            parts = filename.split(sep, 1)
+            if len(parts) == 2:
+                artist = parts[0].strip()
+                song = parts[1].strip()
+                return sanitize_filename(artist), sanitize_filename(song)
+    
+    # If no separator found, treat whole filename as song title
+    return "Unknown_Artist", sanitize_filename(filename)
 
 
 def extract_middle_segment(
@@ -143,8 +243,13 @@ def create_music_analysis_plots(
         # Adjust layout
         plt.tight_layout()
 
-        # Save the combined analysis plot
-        output_file = output_dir / f"{audio_file.stem}_music_analysis.png"
+        # Extract metadata for filename
+        artist, song_name = extract_metadata(audio_file)
+        
+        # Create standardized filename: Artist - Song_Name_music_analysis.png
+        output_filename = f"{artist}-{song_name}_music_analysis.png"
+        output_file = output_dir / output_filename
+        
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         plt.close()  # Close the figure to free memory
 
