@@ -54,13 +54,16 @@ def sanitize_filename(filename: str) -> str:
     # Remove or replace problematic characters
     filename = re.sub(r'[<>:"/\\|?*]', "", filename)  # Remove invalid chars
     filename = re.sub(r"\s+", "_", filename)  # Replace spaces with underscores
-    filename = re.sub(r"[^\w\-_.]", "", filename)  # Keep only alphanumeric, dash, underscore, dot
+    filename = re.sub(r"\.+", "_", filename)  # Replace dots with underscores
+    filename = re.sub(
+        r"[^\w\-_]", "", filename
+    )  # Keep only alphanumeric, dash, underscore
     filename = filename.strip("._")  # Remove leading/trailing dots and underscores
-    
+
     # Limit length to avoid filesystem issues
     if len(filename) > 100:
         filename = filename[:100]
-    
+
     return filename or "unknown"
 
 
@@ -77,29 +80,37 @@ def extract_metadata(audio_file: Path) -> Tuple[str, str]:
         metadata = MutagenFile(str(audio_file))
         if metadata is None:
             return parse_filename(audio_file)
-        
+
         # Try different tag formats for artist
         artist = None
-        for key in ['TPE1', 'ARTIST', '\xa9ART', 'Artist']:
+        for key in ["TPE1", "ARTIST", "\xa9ART", "Artist"]:
             if key in metadata and metadata[key]:
-                artist = str(metadata[key][0]) if isinstance(metadata[key], list) else str(metadata[key])
+                artist = (
+                    str(metadata[key][0])
+                    if isinstance(metadata[key], list)
+                    else str(metadata[key])
+                )
                 break
-        
+
         # Try different tag formats for title
         title = None
-        for key in ['TIT2', 'TITLE', '\xa9nam', 'Title']:
+        for key in ["TIT2", "TITLE", "\xa9nam", "Title"]:
             if key in metadata and metadata[key]:
-                title = str(metadata[key][0]) if isinstance(metadata[key], list) else str(metadata[key])
+                title = (
+                    str(metadata[key][0])
+                    if isinstance(metadata[key], list)
+                    else str(metadata[key])
+                )
                 break
-        
+
         # If metadata not found, parse filename
         if not artist or not title:
             file_artist, file_title = parse_filename(audio_file)
             artist = artist or file_artist
             title = title or file_title
-        
+
         return sanitize_filename(artist), sanitize_filename(title)
-        
+
     except Exception:
         # Fallback to filename parsing
         return parse_filename(audio_file)
@@ -121,13 +132,13 @@ def parse_filename(audio_file: Path) -> Tuple[str, str]:
         Tuple of (artist, song_name)
     """
     filename = audio_file.stem
-    
+
     # Remove track numbers (e.g., "01 ", "1. ", "01. ")
     filename = re.sub(r"^\d+[\.\s]+", "", filename)
-    
+
     # Try to split on common separators
     separators = [" - ", "_-_", " – ", " — "]
-    
+
     for sep in separators:
         if sep in filename:
             parts = filename.split(sep, 1)
@@ -135,7 +146,7 @@ def parse_filename(audio_file: Path) -> Tuple[str, str]:
                 artist = parts[0].strip()
                 song = parts[1].strip()
                 return sanitize_filename(artist), sanitize_filename(song)
-    
+
     # If no separator found, treat whole filename as song title
     return "Unknown_Artist", sanitize_filename(filename)
 
@@ -169,6 +180,7 @@ def extract_middle_segment(
 def create_music_analysis_plots(
     audio_file: Path,
     output_dir: Path,
+    train_test: str,
     figsize: Tuple[int, int] = (15, 12),
     sr: int = 22050,
 ) -> bool:
@@ -184,6 +196,22 @@ def create_music_analysis_plots(
         True if successful, False if failed
     """
     try:
+        # Extract metadata for filename
+        artist, song_name = extract_metadata(audio_file)
+
+        # Create standardized filename: Artist - Song_Name_music_analysis.png
+        # output_filename = f"{artist}-{song_name}_music_analysis.png"
+        output_filename = f"{artist}-{song_name}"
+        output_filepath = output_dir / "arrays" / train_test
+        other = "test" if train_test == "train" else "train"
+        other_output_filepath = output_dir / "arrays" / other
+        if Path.exists(
+            (output_filepath / output_filename).with_suffix(".npy")
+        ) or Path.exists((other_output_filepath / output_filename).with_suffix(".npy")):
+            return False
+
+        output_file = output_filepath / output_filename
+
         # Load audio file
         y, sr = librosa.load(str(audio_file), sr=sr)
 
@@ -201,57 +229,51 @@ def create_music_analysis_plots(
         # 1. Mel-Spectrogram
         mel_spec = librosa.feature.melspectrogram(y=y_segment, sr=sr, n_mels=128)
         mel_spec_db = librosa.amplitude_to_db(mel_spec, ref=np.max)
-        librosa.display.specshow(
-            mel_spec_db, sr=sr, x_axis="time", y_axis="mel", ax=axes[0]
-        )
-        axes[0].set_title("Mel-Spectrogram")
-        axes[0].set_ylabel("Mel Frequency")
+        # librosa.display.specshow(
+        #     mel_spec_db, sr=sr, x_axis="time", y_axis="mel", ax=axes[0]
+        # )
+        # axes[0].set_title("Mel-Spectrogram")
+        # axes[0].set_ylabel("Mel Frequency")
 
-        # 2. Chromagram
-        chroma = librosa.feature.chroma_stft(y=y_segment, sr=sr)
-        librosa.display.specshow(
-            chroma, sr=sr, x_axis="time", y_axis="chroma", ax=axes[1]
-        )
-        axes[1].set_title("Chromagram")
-        axes[1].set_ylabel("Pitch Class")
+        # # 2. Chromagram
+        # chroma = librosa.feature.chroma_stft(y=y_segment, sr=sr)
+        # librosa.display.specshow(
+        #     chroma, sr=sr, x_axis="time", y_axis="chroma", ax=axes[1]
+        # )
+        # axes[1].set_title("Chromagram")
+        # axes[1].set_ylabel("Pitch Class")
 
-        # 3. MFCC
-        mfccs = librosa.feature.mfcc(y=y_segment, sr=sr, n_mfcc=13)
-        librosa.display.specshow(mfccs, sr=sr, x_axis="time", ax=axes[2])
-        axes[2].set_title("MFCC")
-        axes[2].set_ylabel("MFCC Coefficient")
+        # # 3. MFCC
+        # mfccs = librosa.feature.mfcc(y=y_segment, sr=sr, n_mfcc=13)
+        # librosa.display.specshow(mfccs, sr=sr, x_axis="time", ax=axes[2])
+        # axes[2].set_title("MFCC")
+        # axes[2].set_ylabel("MFCC Coefficient")
 
-        # 4. Constant-Q Transform Spectrogram
-        C = np.abs(librosa.cqt(y_segment, sr=sr))
-        C_db = librosa.amplitude_to_db(C, ref=np.max)
-        librosa.display.specshow(
-            C_db, sr=sr, x_axis="time", y_axis="cqt_note", ax=axes[3]
-        )
-        axes[3].set_title("Constant-Q Transform")
-        axes[3].set_ylabel("Note")
+        # # 4. Constant-Q Transform Spectrogram
+        # C = np.abs(librosa.cqt(y_segment, sr=sr))
+        # C_db = librosa.amplitude_to_db(C, ref=np.max)
+        # librosa.display.specshow(
+        #     C_db, sr=sr, x_axis="time", y_axis="cqt_note", ax=axes[3]
+        # )
+        # axes[3].set_title("Constant-Q Transform")
+        # axes[3].set_ylabel("Note")
 
-        # 5. Tempogram
-        onset_envelope = librosa.onset.onset_strength(y=y_segment, sr=sr)
-        tempogram = librosa.feature.tempogram(onset_envelope=onset_envelope, sr=sr)
-        librosa.display.specshow(
-            tempogram, sr=sr, x_axis="time", y_axis="tempo", ax=axes[4]
-        )
-        axes[4].set_title("Tempogram")
-        axes[4].set_ylabel("BPM")
-        axes[4].set_xlabel("Time (s)")
+        # # 5. Tempogram
+        # onset_envelope = librosa.onset.onset_strength(y=y_segment, sr=sr)
+        # tempogram = librosa.feature.tempogram(onset_envelope=onset_envelope, sr=sr)
+        # librosa.display.specshow(
+        #     tempogram, sr=sr, x_axis="time", y_axis="tempo", ax=axes[4]
+        # )
+        # axes[4].set_title("Tempogram")
+        # axes[4].set_ylabel("BPM")
+        # axes[4].set_xlabel("Time (s)")
 
-        # Adjust layout
-        plt.tight_layout()
+        # # Adjust layout
+        # plt.tight_layout()
 
-        # Extract metadata for filename
-        artist, song_name = extract_metadata(audio_file)
-        
-        # Create standardized filename: Artist - Song_Name_music_analysis.png
-        output_filename = f"{artist}-{song_name}_music_analysis.png"
-        output_file = output_dir / output_filename
-        
-        plt.savefig(output_file, dpi=300, bbox_inches="tight")
-        plt.close()  # Close the figure to free memory
+        np.save(output_file, mel_spec_db)
+        # plt.savefig(output_file, dpi=300, bbox_inches="tight")
+        # plt.close()  # Close the figure to free memory
 
         return True
 
@@ -279,12 +301,11 @@ def find_audio_files(directory: Path) -> List[Path]:
 
 @app.command()
 def main(
-    input_dir: str = typer.Argument(
-        ".", help="Input directory containing music files"
-    ),
+    input_dir: str = typer.Argument(".", help="Input directory containing music files"),
     output_dir: str = typer.Argument(
         "music_analysis", help="Output directory for music analysis images"
     ),
+    train_test: str = typer.Argument("train_test", help="Train or test set"),
     figsize_width: int = typer.Option(
         15, "--figsize-width", help="Figure width for music analysis plots"
     ),
@@ -308,12 +329,17 @@ def main(
     Args:
         input_dir: Input directory containing music files
         output_dir: Output directory for music analysis images
+        train_test: Train or test set
         figsize_width: Figure width for music analysis plots
         figsize_height: Figure height for music analysis plots
         sample_rate: Sample rate for audio processing
         random_sample: Take a random sample of N songs instead of processing all files
         seed: Random seed for reproducible sampling
     """
+    if train_test not in ("train", "test"):
+        print("must set train_test argument to either train or test")
+        raise typer.Exit(1)
+
     # Convert to Path objects
     input_path = Path(input_dir)
     output_path = Path(output_dir)
@@ -372,14 +398,15 @@ def main(
 
     for audio_file in progress_bar:
         progress_bar.set_postfix_str(f"Processing: {audio_file.name}")
-        
+
         result = create_music_analysis_plots(
             audio_file,
             output_path,
+            train_test=train_test,
             figsize=(figsize_width, figsize_height),
             sr=sample_rate,
         )
-        
+
         if result is True:
             successful += 1
             progress_bar.set_postfix_str(f"✓ Completed: {audio_file.name}")
@@ -389,7 +416,9 @@ def main(
                 y, _ = librosa.load(str(audio_file), sr=sample_rate)
                 if len(y) / sample_rate < 120:
                     skipped += 1
-                    progress_bar.set_postfix_str(f"⚠ Skipped (too short): {audio_file.name}")
+                    progress_bar.set_postfix_str(
+                        f"⚠ Skipped (too short): {audio_file.name}"
+                    )
                 else:
                     failed += 1
                     progress_bar.set_postfix_str(f"✗ Failed: {audio_file.name}")
