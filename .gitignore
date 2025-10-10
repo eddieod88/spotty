@@ -1,3 +1,15 @@
+# data files
+*.csv
+*.tsv
+*.pickle
+*.pkl
+*.npy
+*.png
+
+# Mac
+*.DS_Store
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
