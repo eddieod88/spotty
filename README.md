@@ -36,7 +36,32 @@ May 2024
 9th Oct 2024
 1. Have a look to see if there are any clusters!!
 1. Tried k-means on bones, did not really work as the results were pretty random by nature.  Try other types of cluster next time and other types of scores
+1. tried dbscan and was also bad.  
+1. maybe try to look into PCA to actually observe the clusters
 
+15th Oct 2024
+1. Need to normalise these variables!!! -> this made it worse somehow.  need to just do some studying of decent ways to do clustering because this is not working
+1. just double checked that we could still separate the whole library into expected playlists - and we can.  therefore we either need better algorithm or more nuanced features
+1. quick look on echo nest - features are exactly the same so need something better... I wonder if the spotify API has anything else we could leverage
+
+4th June 2025
+1. Lane switch - making my own data from my itunes collection. Used claude to generate a data generation script.  the resulting spectrograms will then be used in an autocoder to try and generate some patterns to be used later for clustering
+
+20th June 2025
+1. Need to look into the different channels because they are different sizes (heights).... maybe just look at spectrogram for now.
+
+4th July 2025
+1. Make a pipeline so we can save and look at the results of the images using the test set
+1. Still getting my head around the way the autoencoder will actually WORK with convolutional stuff....
+
+10th Oct 2025
+1. Made a prediction pipeline to take a model, test dataset and which puts results into an appriopriately named results dir
+1. Claire gave me some pointers as to where to explore next... tried increasing kernel size.  increased number of layers and step down to as small a CNN as possible before flattening. tried batch normalisation to try and keep the gradients alive.  but didn't properly work.  inspected gradients with `model.state_dict()` and could see the gradients vanishing.
+
+NEXT: 
+- need to look for remedies for the vanishing gradients.  maybe param optimiser tuning of hyp params.
+- Simplify model a LOT (maybe remove flattening part) to just get some results which aren't ZERO 🤪.  Maybe an encoder could work in 2D???  
+- should look into RNNs, TSNE 
 
 ### TODO
 1. See if we have any hope in separating individual playlists by having a look at PCA
